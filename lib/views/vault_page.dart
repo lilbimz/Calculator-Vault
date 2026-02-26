@@ -3,10 +3,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../models/vault_item.dart';
+import '../viewmodels/calculator_view_model.dart';
 import '../viewmodels/vault_view_model.dart';
 
 class VaultPage extends StatefulWidget {
-  const VaultPage({super.key});
+  const VaultPage({
+    super.key,
+    required this.calculatorViewModel,
+  });
+
+  final CalculatorViewModel calculatorViewModel;
 
   @override
   State<VaultPage> createState() => _VaultPageState();
@@ -32,6 +38,13 @@ class _VaultPageState extends State<VaultPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vault'),
+        actions: <Widget>[
+          IconButton(
+            icon: const Icon(Icons.lock_reset),
+            tooltip: 'Ganti PIN',
+            onPressed: _showChangePinDialog,
+          ),
+        ],
       ),
       body: AnimatedBuilder(
         animation: _viewModel,
@@ -91,6 +104,113 @@ class _VaultPageState extends State<VaultPage> {
       case VaultItemType.document:
         return const Icon(Icons.insert_drive_file_outlined);
     }
+  }
+
+  Future<void> _showChangePinDialog() async {
+    final TextEditingController oldPinController = TextEditingController();
+    final TextEditingController newPinController = TextEditingController();
+    final TextEditingController confirmPinController = TextEditingController();
+
+    String? errorText;
+
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (
+            BuildContext context,
+            void Function(void Function()) setState,
+          ) {
+            return AlertDialog(
+              title: const Text('Ganti PIN Vault'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  TextField(
+                    controller: oldPinController,
+                    decoration: const InputDecoration(
+                      labelText: 'PIN lama',
+                    ),
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: newPinController,
+                    decoration: const InputDecoration(
+                      labelText: 'PIN baru',
+                    ),
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: confirmPinController,
+                    decoration: const InputDecoration(
+                      labelText: 'Konfirmasi PIN baru',
+                    ),
+                    obscureText: true,
+                    keyboardType: TextInputType.number,
+                  ),
+                  if (errorText != null) ...<Widget>[
+                    const SizedBox(height: 8),
+                    Text(
+                      errorText!,
+                      style: const TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Batal'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    final String oldPin = oldPinController.text.trim();
+                    final String newPin = newPinController.text.trim();
+                    final String confirmPin = confirmPinController.text.trim();
+
+                    if (oldPin != widget.calculatorViewModel.secretPin) {
+                      setState(() {
+                        errorText = 'PIN lama salah';
+                      });
+                      return;
+                    }
+                    if (newPin.isEmpty || confirmPin.isEmpty) {
+                      setState(() {
+                        errorText = 'PIN baru tidak boleh kosong';
+                      });
+                      return;
+                    }
+                    if (newPin != confirmPin) {
+                      setState(() {
+                        errorText = 'PIN baru dan konfirmasi tidak sama';
+                      });
+                      return;
+                    }
+
+                    await widget.calculatorViewModel.updatePin(newPin);
+                    if (!mounted) return;
+                    Navigator.of(this.context, rootNavigator: true).pop();
+                    ScaffoldMessenger.of(this.context).showSnackBar(
+                      const SnackBar(
+                        content: Text('PIN berhasil diubah'),
+                      ),
+                    );
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 }
 

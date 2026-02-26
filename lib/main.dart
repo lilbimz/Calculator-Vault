@@ -39,7 +39,13 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  late final CalculatorViewModel _viewModel = CalculatorViewModel();
+  late final CalculatorViewModel _viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = CalculatorViewModel()..load();
+  }
 
   @override
   void dispose() {
@@ -271,7 +277,9 @@ class _MyHomePageState extends State<MyHomePage> {
                               Navigator.of(context).push(
                                 MaterialPageRoute<void>(
                                   builder: (BuildContext context) =>
-                                      const VaultPage(),
+                                      VaultPage(
+                                    calculatorViewModel: _viewModel,
+                                  ),
                                 ),
                               );
                             }

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// ViewModel untuk logika kalkulator.
 class CalculatorViewModel extends ChangeNotifier {
@@ -10,14 +11,37 @@ class CalculatorViewModel extends ChangeNotifier {
   String? _operator;
   bool _shouldResetDisplay = false;
 
-  /// Kode rahasia untuk membuka halaman vault.
-  static const String secretCode = '1234';
+  static const String _pinPrefsKey = 'vault_pin';
+
+  /// PIN rahasia untuk membuka halaman vault.
+  /// Default pertama kali adalah '1234', lalu bisa diubah dan disimpan.
+  String _secretPin = '1234';
 
   String get display => _display;
   String get expression => _expression;
+  String get secretPin => _secretPin;
 
   bool get isInPreviewMode =>
       _expression.isNotEmpty && !_expression.trimRight().endsWith('=');
+
+  /// Memuat PIN dari SharedPreferences.
+  Future<void> load() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String? storedPin = prefs.getString(_pinPrefsKey);
+    if (storedPin != null && storedPin.isNotEmpty) {
+      _secretPin = storedPin;
+      notifyListeners();
+    }
+  }
+
+  /// Mengubah PIN dan menyimpannya ke SharedPreferences.
+  Future<void> updatePin(String newPin) async {
+    if (newPin.isEmpty) return;
+    _secretPin = newPin;
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_pinPrefsKey, _secretPin);
+    notifyListeners();
+  }
 
   void inputDigit(String digit) {
     if (_display == 'Error') {
@@ -129,7 +153,7 @@ class CalculatorViewModel extends ChangeNotifier {
     // Deteksi kode rahasia ketika tidak ada operasi.
     if (_firstOperand == null &&
         _operator == null &&
-        _display == secretCode) {
+        _display == _secretPin) {
       _resetAll();
       notifyListeners();
       return true;
