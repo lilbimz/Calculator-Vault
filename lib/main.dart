@@ -107,7 +107,10 @@ class _MyHomePageState extends State<MyHomePage> {
                             ),
                           ),
                         Text(
-                          _viewModel.display,
+                          (!_viewModel.hasUserInput &&
+                                  _viewModel.display == '0')
+                              ? ''
+                              : _viewModel.display,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(

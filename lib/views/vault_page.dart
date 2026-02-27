@@ -1,10 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 
 import '../models/vault_item.dart';
 import '../viewmodels/calculator_view_model.dart';
 import '../viewmodels/vault_view_model.dart';
+import 'media_viewer_page.dart';
 
 class VaultPage extends StatefulWidget {
   const VaultPage({
@@ -67,10 +69,11 @@ class _VaultPageState extends State<VaultPage> {
                   onPressed: () => _viewModel.deleteItem(item),
                 ),
                 onTap: () {
-                  // Versi sederhana: belum ada viewer khusus.
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Viewer belum diimplementasikan'),
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (BuildContext context) => MediaViewerPage(
+                        item: item,
+                      ),
                     ),
                   );
                 },
@@ -100,7 +103,7 @@ class _VaultPageState extends State<VaultPage> {
           ),
         );
       case VaultItemType.video:
-        return const Icon(Icons.videocam_outlined);
+        return _VideoThumbnail(path: item.path);
       case VaultItemType.document:
         return const Icon(Icons.insert_drive_file_outlined);
     }
@@ -214,3 +217,90 @@ class _VaultPageState extends State<VaultPage> {
   }
 }
 
+class _VideoThumbnail extends StatefulWidget {
+  const _VideoThumbnail({required this.path});
+
+  final String path;
+
+  @override
+  State<_VideoThumbnail> createState() => _VideoThumbnailState();
+}
+
+class _VideoThumbnailState extends State<_VideoThumbnail> {
+  late final VideoPlayerController _controller;
+  late final Future<void> _initializeFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.file(File(widget.path));
+    _initializeFuture = _controller.initialize();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: SizedBox(
+        width: 40,
+        height: 40,
+        child: FutureBuilder<void>(
+          future: _initializeFuture,
+          builder: (BuildContext context, AsyncSnapshot<void> snapshot) {
+            if (snapshot.connectionState == ConnectionState.done &&
+                _controller.value.isInitialized) {
+              return Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: _controller.value.size.width,
+                      height: _controller.value.size.height,
+                      child: VideoPlayer(_controller),
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Container(
+                      margin: const EdgeInsets.all(2),
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.play_arrow,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+            if (snapshot.hasError) {
+              return const Icon(
+                Icons.videocam_off_outlined,
+                size: 20,
+              );
+            }
+            return const Center(
+              child: SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}

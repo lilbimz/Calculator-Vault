@@ -10,6 +10,7 @@ class CalculatorViewModel extends ChangeNotifier {
   double? _firstOperand;
   String? _operator;
   bool _shouldResetDisplay = false;
+  bool _hasUserInput = false;
 
   static const String _pinPrefsKey = 'vault_pin';
 
@@ -20,6 +21,7 @@ class CalculatorViewModel extends ChangeNotifier {
   String get display => _display;
   String get expression => _expression;
   String get secretPin => _secretPin;
+  bool get hasUserInput => _hasUserInput;
 
   bool get isInPreviewMode =>
       _expression.isNotEmpty && !_expression.trimRight().endsWith('=');
@@ -47,25 +49,19 @@ class CalculatorViewModel extends ChangeNotifier {
     if (_display == 'Error') {
       _resetAll();
     }
-    if (digit == '0' && _display == '0' && _firstOperand == null) {
-      return;
-    }
-
-    if (_shouldResetDisplay || _display == '0') {
+    if (_shouldResetDisplay || !_hasUserInput) {
       _display = digit;
-      if (_operator != null && _firstOperand != null) {
-        _expression = '${_formatNumber(_firstOperand!)} $_operator $digit';
-      } else {
-        _expression = digit;
-      }
       _shouldResetDisplay = false;
+      _hasUserInput = true;
     } else {
       _display += digit;
-      if (_operator != null && _firstOperand != null) {
-        _expression = '${_formatNumber(_firstOperand!)} $_operator $_display';
-      } else {
-        _expression = _display;
-      }
+      _hasUserInput = true;
+    }
+
+    if (_operator != null && _firstOperand != null) {
+      _expression = '${_formatNumber(_firstOperand!)} $_operator $_display';
+    } else {
+      _expression = _display;
     }
     notifyListeners();
   }
@@ -75,9 +71,11 @@ class CalculatorViewModel extends ChangeNotifier {
       _display = '0.';
       _expression = _display;
       _shouldResetDisplay = false;
+      _hasUserInput = true;
     } else if (!_display.contains('.')) {
       _display += '.';
       _expression = _display;
+      _hasUserInput = true;
     }
     notifyListeners();
   }
@@ -97,6 +95,7 @@ class CalculatorViewModel extends ChangeNotifier {
     _display = '0';
     _shouldResetDisplay = false;
     _expression = '';
+    _hasUserInput = false;
     notifyListeners();
   }
 
@@ -110,14 +109,17 @@ class CalculatorViewModel extends ChangeNotifier {
       _display = '0';
       _shouldResetDisplay = false;
       _expression = '';
+      _hasUserInput = false;
       notifyListeners();
       return;
     }
     if (_display.length <= 1 ||
         (_display.length == 2 && _display.startsWith('-'))) {
       _display = '0';
+      _hasUserInput = false;
     } else {
       _display = _display.substring(0, _display.length - 1);
+      _hasUserInput = true;
     }
 
     if (_operator != null && _firstOperand != null && _display != '0') {
@@ -181,6 +183,7 @@ class CalculatorViewModel extends ChangeNotifier {
     _display = _formatNumber(current / 100);
     _shouldResetDisplay = true;
     _expression = _display;
+    _hasUserInput = true;
     notifyListeners();
   }
 
@@ -193,6 +196,7 @@ class CalculatorViewModel extends ChangeNotifier {
     }
     _shouldResetDisplay = true;
     _expression = _display;
+    _hasUserInput = true;
     notifyListeners();
   }
 
@@ -201,6 +205,7 @@ class CalculatorViewModel extends ChangeNotifier {
     _display = _formatNumber(current * current);
     _shouldResetDisplay = true;
     _expression = _display;
+    _hasUserInput = true;
     notifyListeners();
   }
 
@@ -214,6 +219,7 @@ class CalculatorViewModel extends ChangeNotifier {
     }
     _shouldResetDisplay = true;
     _expression = _display;
+    _hasUserInput = true;
     notifyListeners();
   }
 
@@ -223,6 +229,7 @@ class CalculatorViewModel extends ChangeNotifier {
     _firstOperand = null;
     _operator = null;
     _shouldResetDisplay = false;
+    _hasUserInput = false;
   }
 
   double _computeResult(double a, double b, String op) {
